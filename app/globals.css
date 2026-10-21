@@ -694,3 +694,14 @@ button {
     padding: 9px 10px;
   }
 }
+
+.decades {
+  flex-basis: 100%;
+  padding-left: 12px;
+  border-left: 2px solid rgba(255, 122, 26, 0.35);
+}
+
+.chip.sub {
+  font-size: 12px;
+  padding: 5px 11px;
+}

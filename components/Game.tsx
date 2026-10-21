@@ -13,6 +13,7 @@ type Phase = "loading" | "playing" | "lifeline" | "over" | "won";
 type Miss = { p: number; rank: number | null; value: number | null; lifeline?: boolean };
 type Feedback = { kind: "good" | "bad" | "info"; text: string } | null;
 type Filter = "all" | Group;
+type Decade = "all" | "2000s" | "2010s" | "2020s";
 
 const LIVES = 3;
 const LIFELINE_MIN = 90;
@@ -24,6 +25,20 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "career", label: "Career" },
   { key: "playoffs", label: "Playoffs" },
 ];
+
+const DECADES: { key: Decade; label: string }[] = [
+  { key: "all", label: "All decades" },
+  { key: "2000s", label: "2000s" },
+  { key: "2010s", label: "2010s" },
+  { key: "2020s", label: "2020s" },
+];
+
+// decade by the season's starting year: 2009-10 is a 2000s season
+function decadeOf(season: string | null): Decade | null {
+  if (!season) return null;
+  const start = parseInt(season.slice(0, 4), 10);
+  return `${Math.floor(start / 10) * 10}s` as Decade;
+}
 
 function normalize(s: string) {
   return s
@@ -104,6 +119,7 @@ export default function Game() {
   const [players, setPlayers] = useState<Player[] | null>(null);
   const [cats, setCats] = useState<CatMeta[] | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [decade, setDecade] = useState<Decade>("all");
   const [cat, setCat] = useState<Category | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
   const [found, setFound] = useState<Set<number>>(new Set());
@@ -159,13 +175,18 @@ export default function Game() {
   );
 
   const randomCategory = useCallback(
-    (f: Filter = filter) => {
+    (f: Filter = filter, d: Decade = decade) => {
       if (!cats) return;
-      const pool = cats.filter((c) => (f === "all" || c.g === f) && c.id !== cat?.id);
+      const pool = cats.filter(
+        (c) =>
+          (f === "all" || c.g === f) &&
+          (f !== "season" || d === "all" || decadeOf(c.y) === d) &&
+          c.id !== cat?.id,
+      );
       const pick = pool[Math.floor(Math.random() * pool.length)];
       loadCategory(pick.id);
     },
-    [cats, cat, filter, loadCategory],
+    [cats, cat, filter, decade, loadCategory],
   );
 
   // first load: category from the URL (shareable) or a random one
@@ -371,6 +392,24 @@ export default function Game() {
           ))}
         </div>
         <span className="cat-count">{cats ? `${cats.length.toLocaleString()} categories` : ""}</span>
+        {filter === "season" && (
+          <div className="filters decades" role="tablist" aria-label="Decade">
+            {DECADES.map((d) => (
+              <button
+                key={d.key}
+                role="tab"
+                aria-selected={decade === d.key}
+                className={decade === d.key ? "chip sub on" : "chip sub"}
+                onClick={() => {
+                  setDecade(d.key);
+                  randomCategory("season", d.key);
+                }}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       {cat && (
